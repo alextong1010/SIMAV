@@ -1,8 +1,8 @@
 from datasets import load_dataset
-from prompts.gen_prompts import get_gen_prompt
 import yaml
 import os
 import json
+from utils.math_utils.math_equivalence import is_equiv
 
 # Load the dataset configuration
 def load_dataset_config():
@@ -82,23 +82,8 @@ def load_domain_specific_verifiers(dataset_name):
     else:
         raise ValueError(f"Domain-specific verifiers not implemented for dataset {dataset_name}.")
 
-def collate_fn(batch, tokenizer, model_device, dataset_name):
-    problems = [item["problem"] for item in batch]
-    prompts = get_gen_prompt(dataset_name, problems)  # Now works in batch!
-    
-    messages = [
-        [{"role": "user", "content": [{"type": "text", "text": prompt}]}]
-        for prompt in prompts
-    ]
-    
-    inputs = tokenizer.apply_chat_template(
-        messages,
-        add_generation_prompt=True,
-        tokenize=True,
-        return_dict=True,
-        return_tensors="pt",
-        padding=True,
-        pad_to_multiple_of=8
-    )
-    
-    return inputs.to(model_device)
+def check_correct_answer(answer, correct_answer, dataset_name):
+    if dataset_name == "math":
+        return is_equiv(answer, correct_answer)
+    else:
+        raise ValueError(f"Unsupported dataset: {dataset_name}")
