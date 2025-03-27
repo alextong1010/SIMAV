@@ -11,7 +11,73 @@ from utils.dataset_utils import load_eval_dataset
 from utils.model_registry import get_full_model_name
 import torch
 from utils.gen_utils import generate_solutions
+from utils.dataset_utils import check_correct_answer
 
+
+def evaluate_problem(args, data_with_generated_solutions):
+    """
+    Evaluates the model on a single problem or batch of problems using the pass@n evaluation metric.
+
+    Args:
+        args (argparse.Namespace): The arguments.
+        data_with_generated_solutions (list): List of dictionaries containing "generated_answers" and "gt_answer".
+
+    Returns:
+        int: The number of correct predictions.
+    """
+    if args.eval_mode.startswith("pass@"):
+        try:
+            n = int(args.eval_mode.split("@")[1])
+            correct_count = evaluate_problem_pass_at_n(args, data_with_generated_solutions, n)
+        except (ValueError, IndexError):
+            raise ValueError(f"Invalid eval_mode format: {args.eval_mode}. Expected format: pass@n where n is a number.")
+    elif args.eval_mode == "bon-mav":
+        correct_count = evaluate_problem_bon_mav(args, data_with_generated_solutions)
+    else:
+        raise ValueError(f"Invalid eval_mode: {args.eval_mode}")
+    
+    return correct_count
+
+def evaluate_problem_bon_mav(args, data_with_generated_solutions):
+    """
+    Evaluates the model on a single problem or batch of problems using the bon-mav evaluation metric.
+    """
+    correct_count = 0
+    raise NotImplementedError("bon-mav evaluation metric not implemented")
+    
+
+def evaluate_problem_pass_at_n(args, data_with_generated_solutions, n):
+    """
+    Evaluates the model on a single problem or batch of problems using the pass@n evaluation metric.
+
+    Args:
+        args (argparse.Namespace): The arguments.
+        data_with_generated_solutions (list): List of dictionaries containing "generated_answers" and "gt_answer".
+        n (int): The number of generated answers to consider for evaluation (e.g., 1 for pass@1, 8 for pass@8).
+
+    Returns:
+        int: The number of correct predictions.
+    """
+    assert args.num_generations >= n, f"num_generations must be {n} or greater for pass@{n} evaluation"
+    if args.num_generations > n:
+        print(f"Warning: You've set num_generations to {args.num_generations}, but eval_mode is set to pass@{n}. Only the first {n} generated answers will be considered.")
+
+    correct_count = 0
+    for d in data_with_generated_solutions:
+        is_correct = False
+        for i in range(n):
+            is_correct = check_correct_answer(d["generated_answers"][i], d["gt_answer"], args.dataset)
+            if is_correct:
+                correct_count += 1
+                break
+        if args.verbose:
+            print(f"Checking if any of the first {n} generated answers {d['generated_answers'][:n]} is the same as the ground truth answer {d['gt_answer']} | Result: {'Correct' if is_correct else 'Incorrect'}")
+
+    return correct_count
+
+
+
+#TODO: Work in progress
 def evaluate_model(args, model, tokenizer, eval_dataset, device):
     """
     Evaluates the model on a set of examples and prints detailed results.
@@ -53,6 +119,9 @@ def evaluate_model(args, model, tokenizer, eval_dataset, device):
     with open(f"backup_generated_answers_{args.run_name}.json", "w") as f:
         json.dump(ans, f)
 
+
+
+#TODO: Work in progress
 if __name__ == "__main__":
     start_time = time.time()
     start_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")

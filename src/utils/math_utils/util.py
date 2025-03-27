@@ -3,7 +3,7 @@ def last_boxed_only_string(string):
     if idx < 0:
         idx = string.rfind("\\fbox")
         if idx < 0:
-            return None
+            return ""
 
     i = idx
     right_brace_idx = None
@@ -19,7 +19,7 @@ def last_boxed_only_string(string):
         i += 1
     
     if right_brace_idx == None:
-        retval = None
+        retval = ""
     else:
         retval = string[idx:right_brace_idx + 1]
     
@@ -33,4 +33,4 @@ def remove_boxed(s):
         assert s[-1] == "}"
         return s[len(left):-1]
     except:
-        return None
+        return ""
